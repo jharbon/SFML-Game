@@ -1,0 +1,13 @@
+# Ignore compiled binaries, build files, libraries and log files
+bin/
+build/
+lib/
+logs/
+
+# Ignore any object files and executables in the project root directory
+*.o
+*.out
+*.exe
+
+# Ignore Visual Studio Code files 
+.vscode/
