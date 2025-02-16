@@ -1,10 +1,13 @@
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <SFML/Graphics.hpp>
 
+const std::string ASSETS_DIR_NAME = "assets";
+const std::string CONFIG_DIR_NAME = "config";
 const std::string LOGS_DIR_NAME = "logs";
 const std::string LOG_FILE_NAME = "log.txt";
 
@@ -15,16 +18,17 @@ const unsigned int INIT_WINDOW_WIDTH = static_cast<unsigned int>(WINDOW_SCALE * 
 const unsigned int INIT_WINDOW_HEIGHT = static_cast<unsigned int>(WINDOW_SCALE * DISPLAY_HEIGHT);
 constexpr unsigned int FRAME_RATE = 60;  // FPS
 
-void enforce_dir_existence(std::filesystem::path dir, bool must_already_exist);
-void configure_logger(std::filesystem::path log_path);
+void enforce_dir_existence(std::filesystem::path dir);
+void configure_logger(std::filesystem::path project_dir);
 
 int main(int argc, char* argv[]) {
-    // Get project directory path and enforce logs directory existence
+    // Get project root path
     std::filesystem::path project_dir = std::filesystem::canonical(argv[0]).parent_path().parent_path();
-    enforce_dir_existence(project_dir / LOGS_DIR_NAME, false);
-    // Define log file path and configure multi-logger as default
-    std::filesystem::path log_path = project_dir / LOGS_DIR_NAME / LOG_FILE_NAME;
-    configure_logger(log_path);
+    // Configure multi-logger as default
+    configure_logger(project_dir);
+    // Throw exception if assets or config directories do not exist in project root
+    enforce_dir_existence(project_dir / ASSETS_DIR_NAME);
+    enforce_dir_existence(project_dir / CONFIG_DIR_NAME);
 
     // Render a centered window
     sf::RenderWindow window(sf::VideoMode(INIT_WINDOW_WIDTH, INIT_WINDOW_HEIGHT), "SFML Game");
@@ -62,31 +66,46 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void enforce_dir_existence(std::filesystem::path dir, bool must_already_exist) {
+void enforce_dir_existence(std::filesystem::path dir) {
     if (!std::filesystem::exists(dir)) {
-        if (must_already_exist) {
-            throw std::runtime_error("Required directory missing: '" + dir.string() + "'" );
-        }
-
-        try {
-            std::filesystem::create_directory(dir);
-        }
-        catch (const std::filesystem::filesystem_error& e) {
-            throw std::runtime_error("Failed to create directory: '" + dir.string() + "': " + e.what());
-        }
+        spdlog::error("Required directory '{}' is missing. Ensure this directory exists before running the program", dir.string());
+        throw std::runtime_error("Required directory '" + dir.string() + "' is missing. Ensure this directory exists before running the program");
     }
 }
 
-void configure_logger(std::filesystem::path log_path) {
+void configure_logger(std::filesystem::path project_dir) {
+    std::filesystem::path logs_dir = project_dir / LOGS_DIR_NAME;
+    bool log_to_file = true;
+    // Create logs directory if it does not already exist
+    if (!std::filesystem::exists(logs_dir)) {
+        try {
+            std::cerr << "WARNING: Creating logs directory with path '" << logs_dir.string() << "'\n"; 
+            std::filesystem::create_directory(logs_dir);
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "ERROR: Failed to create logs directory with path '" << logs_dir.string() << "': " << e.what() << "\n";
+            log_to_file = false;
+        }
+    }
+    
     // Use logger sinks to create multi-logger which simultaneously logs to both console and file 
     auto console_sink_sptr = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     console_sink_sptr->set_pattern("%^[%Y-%b-%d %H:%M:%S] [%l] - %v%$");
-    auto file_sink_sptr = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), false);
-    file_sink_sptr->set_pattern("[%Y-%b-%d %H:%M:%S] [%l] - %v");
-    std::vector<spdlog::sink_ptr> sinks{console_sink_sptr, file_sink_sptr};
+    std::vector<spdlog::sink_ptr> sinks{console_sink_sptr};
+    std::filesystem::path log_path = logs_dir / LOG_FILE_NAME;
+    if (log_to_file) {
+        // Create valid sink for logging to file
+        auto file_sink_sptr = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), false);
+        file_sink_sptr->set_pattern("[%Y-%b-%d %H:%M:%S] [%l] - %v");
+        sinks.push_back(file_sink_sptr);
+    }
     auto multi_logger_sptr = std::make_shared<spdlog::logger>("multi-logger", sinks.begin(), sinks.end());  
     // Set multi-logger as default for easy logging across program 
     spdlog::set_default_logger(multi_logger_sptr);
     spdlog::set_level(spdlog::level::info);  // Log everything with severity of INFO and higher
     spdlog::flush_on(spdlog::level::warn);  // Immediate log flushing for severity of WARN and higher
+    
+    if (!log_to_file) {
+        spdlog::warn("Logging to file disabled. Logging to console only");
+    }
 }
