@@ -41,11 +41,22 @@ find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 find_package(SFML 2.5 REQUIRED COMPONENTS graphics window system) 
 
-# Compile a game executable
+# Compile game executable
 add_executable(game src/main.cpp)
 
-# Install game executable in bin/
+# Install game executable in bin
 install(TARGETS game DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 # Link required libraries
 target_link_libraries(game PRIVATE spdlog fmt sfml-graphics sfml-window sfml-system)
+
+# Register unit tests and automatically run CTest with a custom target
+enable_testing()
+find_package(GTest REQUIRED)
+add_executable(run-tests tests/test_main.cpp)
+target_link_libraries(run-tests PRIVATE gtest pthread)
+add_test(NAME Tests COMMAND run-tests)
+add_custom_target(run_tests
+    COMMAND ${CMAKE_CTEST_COMMAND} --verbose 
+    DEPENDS run-tests
+)
