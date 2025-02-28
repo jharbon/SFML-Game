@@ -8,7 +8,7 @@
 ## Phase 1: Rendering and Player Mechanics 
 
 - [✅] Render a basic window and shape to test the SFML setup
-- [📌] Design and render a basic player character sprite
+- [✅] Design and render a basic player character sprite
 - [📌] Design and render a basic tile-based level for testing
 - [📌] Axis-Aligned Bounding Box (AABB) collision detection
 - [📌] Receive and configure input from keyboard and joystick controller 

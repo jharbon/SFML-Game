@@ -42,10 +42,13 @@ find_package(fmt REQUIRED)
 find_package(SFML 2.5 REQUIRED COMPONENTS graphics window system) 
 
 # Compile game executable
-add_executable(game src/main.cpp)
+add_executable(game src/main.cpp src/Sprite.cpp)
 
 # Install game executable in bin
 install(TARGETS game DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+
+# Include project headers
+target_include_directories(game PRIVATE include)
 
 # Link required libraries
 target_link_libraries(game PRIVATE spdlog fmt sfml-graphics sfml-window sfml-system)
@@ -54,6 +57,7 @@ target_link_libraries(game PRIVATE spdlog fmt sfml-graphics sfml-window sfml-sys
 enable_testing()
 find_package(GTest REQUIRED)
 add_executable(run-tests tests/test_main.cpp)
+target_include_directories(run-tests PRIVATE include)
 target_link_libraries(run-tests PRIVATE gtest pthread)
 add_test(NAME Tests COMMAND run-tests)
 add_custom_target(run_tests

@@ -5,6 +5,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <SFML/Graphics.hpp>
+#include "Sprite.hpp"
 
 const std::string ASSETS_DIR_NAME = "assets";
 const std::string CONFIG_DIR_NAME = "config";
@@ -18,12 +19,17 @@ const unsigned int INIT_WINDOW_WIDTH = static_cast<unsigned int>(WINDOW_SCALE * 
 const unsigned int INIT_WINDOW_HEIGHT = static_cast<unsigned int>(WINDOW_SCALE * DISPLAY_HEIGHT);
 constexpr unsigned int FRAME_RATE = 60;  // FPS
 
+const std::filesystem::path PLAYER_SPRITE_REL_PATH = std::filesystem::path(ASSETS_DIR_NAME) / "sprites" / "player.png"; 
+constexpr int PLAYER_SCALE = 10;
+constexpr int PLAYER_WIDTH = 32;  // Pixels
+constexpr int PLAYER_HEIGHT = 32;  // Pixels
+
 void enforce_dir_existence(std::filesystem::path dir);
 void configure_logger(std::filesystem::path project_dir);
 
 int main(int argc, char* argv[]) {
     // Get project root path
-    std::filesystem::path project_dir = std::filesystem::canonical(argv[0]).parent_path().parent_path();
+    const std::filesystem::path project_dir = std::filesystem::canonical(argv[0]).parent_path().parent_path();
     // Configure multi-logger as default
     configure_logger(project_dir);
     // Throw exception if assets or config directories do not exist in project root
@@ -39,16 +45,19 @@ int main(int argc, char* argv[]) {
     ); 
     window.setPosition(window_centered_pos);
     sf::Vector2u window_size = window.getSize();
-    // Render a basic circle
-    sf::CircleShape circle(window_size.x / 4);
-    circle.setFillColor(sf::Color::Red);
-    circle.setPosition(window_size.x/2 - circle.getRadius(), window_size.y/2 - circle.getRadius());
     spdlog::info("Initialized window with {}x{} resolution and {} FPS cap", window_size.x, window_size.y, FRAME_RATE);
+
+    // Render player character sprite in center of window
+    Sprite player_sprite(project_dir / PLAYER_SPRITE_REL_PATH, PLAYER_WIDTH, PLAYER_HEIGHT, 0, 0, PLAYER_SCALE); 
+    player_sprite.set_position((window_size.x - player_sprite.get_width())/2, (window_size.y - player_sprite.get_height())/2);
+    spdlog::info("Initialized player sprite with:\ninitial (width, height) = ({}, {})\nscale factor = {}\n(x, y) = ({}, {})",
+        PLAYER_WIDTH, PLAYER_HEIGHT, player_sprite.get_scale(), player_sprite.get_x(), player_sprite.get_y()
+    );
 
     // Keep running the program while the window exists 
     while (window.isOpen()) {
         window.clear(sf::Color::Black);
-        window.draw(circle);
+        player_sprite.draw(window);
         window.display();
 
         // Allow the window to be closed 
